@@ -153,20 +153,11 @@ def save_points_as_ply(points, file_path, comment="3D point cloud"):
         file.write("property float nx\n")
         file.write("property float ny\n")
         file.write("property float nz\n") 
-        file.write("property float index\n") 
-        
+
+        file.write("property float index\n")  
         file.write("property float loc_x\n")
         file.write("property float loc_y\n")
-        file.write("property float loc_z\n") 
-        file.write("property float v1x\n")
-        file.write("property float v1y\n")
-        file.write("property float v1z\n") 
-        file.write("property float v2x\n")
-        file.write("property float v2y\n")
-        file.write("property float v2z\n") 
-        file.write("property float v3x\n")
-        file.write("property float v3y\n")
-        file.write("property float v3z\n")
+        file.write("property float loc_z\n")  
 
         file.write("end_header\n")
         
@@ -357,6 +348,9 @@ def render_camera(camera,file_path):
     bpy.ops.render.render(write_still=True)
     print(f"Rendered and saved {file_path}")
 
+
+
+#将摄像机数据保存到文件并渲染
 def save_cameras_to_file(mesh_name='main', keyframe=0, is_render=True):
     #-----------------------------------------------------------------
     #输出数据# 确保输出目录存在
@@ -382,15 +376,23 @@ def save_cameras_to_file(mesh_name='main', keyframe=0, is_render=True):
 
     mesh_data={}
     mesh_data['triangles']=[]
+
+    world_matrix = eval_obj.matrix_world 
+
     # 输出三角面的位置信息
     for polygon in mesh.polygons:
         triangle={}
         triangle['index']=polygon.index  
         triangle['Vertices']=[] 
         for vert_idx in polygon.vertices:
-            x=mesh.vertices[vert_idx].co.x
-            y=mesh.vertices[vert_idx].co.y
-            z=mesh.vertices[vert_idx].co.z
+            vec=Vector((mesh.vertices[vert_idx].co.x,
+                       mesh.vertices[vert_idx].co.y,
+                       mesh.vertices[vert_idx].co.z)) 
+            
+            vec_w=world_matrix @  vec
+            x= vec_w.x
+            y= vec_w.y
+            z= vec_w.z
             triangle['Vertices'].append([x,y,z]) 
 
         mesh_data['triangles'].append(triangle)
@@ -422,7 +424,7 @@ def save_cameras_to_file(mesh_name='main', keyframe=0, is_render=True):
     #生成训练用的数据
     for camera in cameras:
         frame={}
-        frame['file_path']=f"images/{camera.name}"
+        frame['file_path']=f"images/{keyframe}_{camera.name}"
         frame['transform_matrix']=np.array(camera.matrix_world).tolist()
         
         frame['keyframe']=keyframe #未来为了支持多关键帧动画生成预留的数据
@@ -579,26 +581,15 @@ def calculate_local_position(vertices, o, x, y, n, v1, v2, v3,index):
         loc_y = np.dot(v - o, y)
         loc_z = np.dot(v - o, n)
 
-        #x,y,z,r,g,b,nx,ny,nz,index,loc_x, loc_y, loc_z,v1x,v1y,v1z,v2x,v2y,v2z,v3x,v3y,v3z
-
+        #x,y,z,r,g,b,nx,ny,nz,index,loc_x, loc_y, loc_z,   
         line  = "{:.4f} {:.4f} {:.4f} ".format(v[0],v[1],v[2])
         line += "{:.0f} {:.0f} {:.0f} ".format(0,0,0)
         line += "{:.4f} {:.4f} {:.4f} ".format(1,0,0)
         line += "{:.0f} ".format(index)
-        line += "{:.4f} {:.4f} {:.4f} ".format(loc_x,loc_y,loc_z)
-        line += "{:.4f} {:.4f} {:.4f} ".format(v1[0],v1[1],v1[2])
-        line += "{:.4f} {:.4f} {:.4f} ".format(v2[0],v2[1],v2[2])
-        line += "{:.4f} {:.4f} {:.4f} ".format(v3[0],v3[1],v3[2])
+        line += "{:.4f} {:.4f} {:.4f} ".format(loc_x,loc_y,loc_z) 
         
-
-        local_positions.append(line)
-        #local_positions.append("{
-        #    'global': tuple(v),
-        #    'local': (loc_x, loc_y, loc_z),
-        #    'v1': tuple(v1),
-        #    'v2': tuple(v2),
-        #    'v3': tuple(v3)
-        #})
+        #加入到数据中
+        local_positions.append(line) 
 
     return local_positions
 
@@ -644,6 +635,9 @@ if __name__=="__main__":
     # 保存当前场景为 .blend 文件 
     bpy.ops.wm.save_as_mainfile(filepath= os.path.join(os.getcwd(), 'data/output.blend')  )
   
+
+
+    keyframes=[0]
     #----------------------------
     #创建顶点
     vertices=create_points(k=2)
@@ -652,9 +646,9 @@ if __name__=="__main__":
     save_points_as_ply(list(vertices),ply_path)
 
     
-
-    #输出数据# 确保输出目录存在,参数是是否进行绘制
-    save_cameras_to_file(keyframe=0,is_render=True)
+    for keyframe in keyframes: 
+        #输出数据# 确保输出目录存在,参数是是否进行绘制
+        save_cameras_to_file(keyframe=0,is_render=True)
  
     
 
