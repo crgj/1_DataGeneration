@@ -377,19 +377,43 @@ def save_cameras_to_file(mesh_name='main', keyframe=0, is_render=True):
     obj = bpy.context.object
     depsgraph = bpy.context.evaluated_depsgraph_get()  # 获取依赖图
     eval_obj = obj.evaluated_get(depsgraph)  # 获取应用了修改器后的对象
-    mesh = eval_obj.to_mesh()  # 生成 mesh 数据
+    mesh = eval_obj.to_mesh()  # 生成 mesh 数据 
+    world_matrix = eval_obj.matrix_world 
+
+    
+    #构建三角形，如果原始模型是四边形，就创建两个三角形
+    triangles = []
+
+    # 遍历每个多边形
+    for polygon in mesh.polygons:
+        # 如果多边形是三角形（3个顶点）
+        if len(polygon.vertices) == 3:
+            triangles.append([polygon.vertices[0],
+                                polygon.vertices[1],
+                                polygon.vertices[2]])
+
+        # 如果多边形是四边形（4个顶点），分解成两个三角形
+        elif len(polygon.vertices) == 4:
+            # 通常四边形可以分解为两个三角形
+            # 第一个三角形使用第一个，第二个，第三个顶点
+            triangles.append([polygon.vertices[0],
+                                polygon.vertices[1],
+                                polygon.vertices[2]]) 
+            # 第二个三角形使用第一个，第三个，第四个顶点
+            triangles.append([polygon.vertices[0],
+                                polygon.vertices[2],
+                                polygon.vertices[3]]) 
+
 
     mesh_data={}
     mesh_data['triangles']=[]
-
-    world_matrix = eval_obj.matrix_world 
-
+    index=0
     # 输出三角面的位置信息
-    for polygon in mesh.polygons:
-        triangle={}
-        triangle['index']=polygon.index  
-        triangle['Vertices']=[] 
-        for vert_idx in polygon.vertices:
+    for triangle in triangles:
+        triangle_data={}
+        triangle_data['index']=index 
+        triangle_data['Vertices']=[] 
+        for vert_idx in triangle:
             vec=Vector((mesh.vertices[vert_idx].co.x,
                        mesh.vertices[vert_idx].co.y,
                        mesh.vertices[vert_idx].co.z)) 
@@ -398,9 +422,11 @@ def save_cameras_to_file(mesh_name='main', keyframe=0, is_render=True):
             x= vec_w.x
             y= vec_w.y
             z= vec_w.z
-            triangle['Vertices'].append([x,y,z]) 
+            triangle_data['Vertices'].append([x,y,z]) 
+        
+        index=index+1
 
-        mesh_data['triangles'].append(triangle)
+        mesh_data['triangles'].append(triangle_data)
  
  
     mesh_folder=os.path.join(os.getcwd(), 'output/meshes') 
@@ -515,18 +541,45 @@ def create_points(k = 2 ): # 可以根据需要调整级别
     for obj in imported_objects:
         # 确保对象是网格类型
         if obj.type == 'MESH' and   obj.name == 'main':
+              
             # 获取网格数据
             mesh = obj.data
             # 获取对象的世界变换矩阵
             world_matrix = obj.matrix_world
+ 
+
+            #构建三角形，如果原始模型是四边形，就创建两个三角形
+            triangles = []
+
+            # 遍历每个多边形
+            for polygon in mesh.polygons:
+                # 如果多边形是三角形（3个顶点）
+                if len(polygon.vertices) == 3:
+                    triangles.append([polygon.vertices[0],
+                                      polygon.vertices[1],
+                                      polygon.vertices[2]])
+
+                # 如果多边形是四边形（4个顶点），分解成两个三角形
+                elif len(polygon.vertices) == 4:
+                    # 通常四边形可以分解为两个三角形
+                    # 第一个三角形使用第一个，第二个，第三个顶点
+                    triangles.append([polygon.vertices[0],
+                                      polygon.vertices[1],
+                                      polygon.vertices[2]]) 
+                    # 第二个三角形使用第一个，第三个，第四个顶点
+                    triangles.append([polygon.vertices[0],
+                                      polygon.vertices[2],
+                                      polygon.vertices[3]]) 
+
+
 
             # 遍历网格的每个面
-            for index, face in enumerate(mesh.polygons):
+            for index, face in enumerate(triangles):
                 #获得三个顶点
-                v1 = world_matrix @ mesh.vertices[face.vertices[0]].co
-                v2 = world_matrix @ mesh.vertices[face.vertices[1]].co
-                v3 = world_matrix @ mesh.vertices[face.vertices[2]].co
-
+                v1 = world_matrix @ mesh.vertices[face[0]].co
+                v2 = world_matrix @ mesh.vertices[face[1]].co
+                v3 = world_matrix @ mesh.vertices[face[2]].co
+               
                 # 计算局部坐标系
                 o, n, x, y = calculate_local_coordinates(v1, v2, v3)
 
@@ -538,6 +591,7 @@ def create_points(k = 2 ): # 可以根据需要调整级别
                 #print(vertex_positions[0]['global'][0])
                 update_array_efficient(vertices,vertex_positions)
                  
+ 
     return vertices
      
 
