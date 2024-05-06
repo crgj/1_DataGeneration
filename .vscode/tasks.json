@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Run Blender Script",
+        "type": "shell",
+        "command": "blender",
+        "args": [
+          "--background",
+          "--python",
+          "${file}"  // 或者指定脚本的路径
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Run Blender Script with GUI",
+        "type": "shell",
+        "command": "blender",
+        "args": [ 
+          "--python",
+          "${file}"  // 或者指定脚本的路径
+        ],
+        "group": "build",
+        "presentation": {
+            "reveal": "always",
+            "focus": true,
+            "panel": "shared",
+            "clear": true
+        }
+      }
+    ]
+  }
