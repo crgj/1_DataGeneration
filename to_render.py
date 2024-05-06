@@ -138,6 +138,11 @@ def save_points_as_ply(points, file_path, comment="3D point cloud"):
     file_path (str): Path to the output PLY file.
     comment (str): Comment to include in the header of the PLY file.
     """
+
+    output_folder=os.path.join(os.getcwd(), 'output') 
+    os.makedirs(output_folder, exist_ok=True)
+    
+
     with open(file_path, 'w') as file:
         # 写入 PLY 头部
         file.write("ply\n")
